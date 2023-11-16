@@ -1,0 +1,49 @@
+default:
+  tags: [haywardm]
+
+stages:
+  - build
+  - test_style
+  - test_integration
+  - deploy
+
+# Этап сборки
+stage_build:
+  stage: build
+  script:
+    - cd src/cat/ && make && cd ..  # Сборка подпроекта cat
+    - cd grep/ && make && cd ..  # Сборка подпроекта grep
+  after_script:
+    - bash src/telegram.sh ci # Выполнение скрипта оповещения
+  artifacts:
+    paths:
+      - src/cat/s21_cat # Артефакты кэта
+      - src/grep/s21_grep # Артефакты грепа 
+    expire_in: 30 day  # Артефакты удаляются через 30 дней
+
+# Этап проверки стиля кода
+stage_test_style:
+  stage: test_style
+  script:
+    - cd src/cat && make clang && cd ..  # Проверка стиля кода подпроекта cat
+    - cd grep && make clang && cd ..  # Проверка стиля кода подпроекта grep
+  after_script:
+    - bash src/telegram.sh ci # Выполнение скрипта оповещения
+
+# Этап тестов (интеграция) тестирования
+stage_test_integration:
+  stage: test_integration
+  script:
+    - cd src/cat && make && make test && cd ..
+    - cd grep && make && make test && cd ..
+  after_script:
+    - bash src/telegram.sh ci # Выполнение скрипта оповещения
+
+stage_deploy:
+  stage: deploy
+  script:
+    - bash src/root.sh
+  after_script:
+    - bash src/telegram.sh cd # Выполнение скрипта оповещения
+  allow_failure: false
+  when: manual
